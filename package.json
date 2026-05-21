@@ -1,22 +1,23 @@
 {
-  "name": "playwright-bdd-test-framework",
-  "version": "1.0.0",
-  "description": "Premium Playwright BDD Test Framework",
-  "main": "index.js",
-  "scripts": {
-    "bddgen": "npx playwright-bdd gherkin",
-    "test": "npx playwright-bdd gherkin && npx playwright test",
-    "test:ui": "npx playwright-bdd gherkin && npx playwright test --grep @ui",
-    "test:api": "npx playwright-bdd gherkin && npx playwright test --grep @api",
-    "test:headed": "npx playwright-bdd gherkin && npx playwright test --headed",
-    "test:debug": "npx playwright-bdd gherkin && npx playwright test --debug"
-  },
-  "devDependencies": {
-    "@cucumber/cucumber": "^10.8.0",
-    "@playwright/test": "^1.44.0",
-    "@types/node": "^20.12.12",
-    "playwright": "^1.44.0",
-    "playwright-bdd": "^7.1.0",
-    "typescript": "^5.4.5"
-  }
+	"name": "playwright-bdd-test-framework",
+	"version": "1.0.0",
+	"description": "Premium Playwright BDD Test Framework",
+	"main": "index.js",
+	"scripts": {
+		"bddgen": "npx playwright-bdd gherkin",
+		"test": "npx playwright-bdd gherkin && npx playwright test",
+		"test:ui": "npx playwright-bdd gherkin && npx playwright test --grep @ui --ui",
+		"test:api": "npx playwright-bdd gherkin && npx playwright test --grep @api",
+		"test:api:ui": "npx playwright-bdd gherkin && npx playwright test --grep @api --ui",
+		"test:headed": "npx playwright-bdd gherkin && npx playwright test --headed",
+		"test:debug": "npx playwright-bdd gherkin && npx playwright test --debug"
+	},
+	"devDependencies": {
+		"@cucumber/cucumber": "^10.8.0",
+		"@playwright/test": "^1.44.0",
+		"@types/node": "^20.12.12",
+		"playwright": "^1.44.0",
+		"playwright-bdd": "^7.1.0",
+		"typescript": "^5.4.5"
+	}
 }
