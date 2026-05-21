@@ -1,0 +1,34 @@
+# BrowserStack Configuration for Playwright
+# To run: npx browserstack-cypress run (or browserstack-playwright-cli equivalent)
+# Standard practice is to set credentials in environment variables:
+# BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY
+
+userName: BROWSERSTACK_USERNAME
+accessKey: BROWSERSTACK_ACCESS_KEY
+
+# Configure the browsers/OS you want to run tests on
+platforms:
+  - os: Windows
+    osVersion: "11"
+    browserName: chrome
+    browserVersion: latest
+  - os: Windows
+    osVersion: "11"
+    browserName: edge
+    browserVersion: latest
+  - os: OS X
+    osVersion: Sonoma
+    browserName: play-safari
+    browserVersion: latest
+  - os: OS X
+    osVersion: Sonoma
+    browserName: firefox
+    browserVersion: latest
+
+# Project details
+projectName: "Playwright BDD Test Framework"
+buildName: "Local Playwright BDD Build"
+browserstackLocal: false
+debug: true
+networkLogs: true
+consoleLogs: info
