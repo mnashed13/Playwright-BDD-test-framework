@@ -6,7 +6,7 @@
 	"scripts": {
 		"bddgen": "npx playwright-bdd gherkin",
 		"test": "npx playwright-bdd gherkin && npx playwright test",
-		"test:ui": "npx playwright-bdd gherkin && npx playwright test --grep @ui --ui",
+		"test:ui": "npx playwright-bdd gherkin && npx playwright test --grep @ui",
 		"test:api": "npx playwright-bdd gherkin && npx playwright test --grep @api",
 		"test:api:ui": "npx playwright-bdd gherkin && npx playwright test --grep @api --ui",
 		"test:headed": "npx playwright-bdd gherkin && npx playwright test --headed",
