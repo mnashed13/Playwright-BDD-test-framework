@@ -143,5 +143,60 @@ When pushing or making pull requests to `main` or `master` branches, the `.githu
 
 ### Adding an API Test:
 1. **Create a `.feature` file** inside `features/api/` using `@api` tags.
-2. **Add API endpoint helper methods** inside `api/EchoApiClient.ts` (or create a new client helper).
+2. Add API endpoint helper methods inside `api/EchoApiClient.ts` (or create a new client helper).
+
+## 📦 Built With
+
+- **Playwright** – Browser automation library.
+- **Cucumber BDD** – Gherkin syntax for behavior-driven development.
+- **TypeScript** – Typed superset of JavaScript.
+- **BrowserStack** – Cross‑browser cloud testing.
+- **GitHub Actions** – CI/CD pipeline.
+
+## 🏗️ Architecture Overview
+
+The framework follows a clean separation of concerns:
+
+```
+features/
+  └── *.feature   ← Gherkin specifications
+pages/
+  └── *.ts        ← Page Object Model classes
+steps/
+  └── *.ts        ← Step definitions & fixtures
+api/
+  └── *.ts        ← API client helpers
+```
+
+Playwright‑BDD compiles the `.feature` files into native Playwright test suites, injects the page‑object fixtures, and executes them in parallel across browsers.
+
+## 🙋‍♂️ Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b my‑feature`).
+3. Write tests for your changes.
+4. Run the full test suite (`npm run test`).
+5. Open a Pull Request with a clear description.
+
+## 📜 License
+
+This project is licensed under the **MIT License** – see the `LICENSE` file for details.
+
+## ❓ FAQ
+
+**Q:** How do I run tests on a specific browser?
+**A:** Use the `--project` flag, e.g. `npx playwright test --project=chromium`.
+
+**Q:** Where are the test reports stored?
+**A:** HTML reports are generated in `playwright-report/` after each run.
+
 3. **Write Step Definitions** inside `steps/api_steps.ts` mapping HTTP parameters, payloads, and validating response schemas.
+## 🚀 Project Roadmap
+
+- **v1.1**: Add support for visual regression testing.
+- **v1.2**: Integrate with Cypress for hybrid testing.
+- **v2.0**: Provide a CLI wizard for project scaffolding.
+- **v2.1**: Add community plugin system for custom fixtures.
+- **Future**: Explore AI‑generated test suggestions using Gemini.
