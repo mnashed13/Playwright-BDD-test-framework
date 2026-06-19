@@ -4,8 +4,9 @@ export class WebTablesPage {
   private readonly page: Page;
   private readonly addButton: Locator;
   private readonly searchInput: Locator;
-  
-  // Registration Form fields
+
+  // Registration Form fields – scoped inside the modal to avoid ambiguity
+  private readonly modal: Locator;
   private readonly firstNameInput: Locator;
   private readonly lastNameInput: Locator;
   private readonly emailInput: Locator;
@@ -18,34 +19,49 @@ export class WebTablesPage {
     this.page = page;
     this.addButton = page.locator('#addNewRecordButton');
     this.searchInput = page.locator('#searchBox');
-    
-    this.firstNameInput = page.locator('#firstName');
-    this.lastNameInput = page.locator('#lastName');
-    this.emailInput = page.locator('#userEmail');
-    this.ageInput = page.locator('#age');
-    this.salaryInput = page.locator('#salary');
-    this.departmentInput = page.locator('#department');
-    this.submitButton = page.locator('#submit');
+
+    // Scope all form locators inside the modal so they only resolve
+    // after the modal is open and avoid stale-element issues.
+    this.modal = page.locator('.modal-content');
+    this.firstNameInput = this.modal.locator('#firstName');
+    this.lastNameInput = this.modal.locator('#lastName');
+    this.emailInput = this.modal.locator('#userEmail');
+    this.ageInput = this.modal.locator('#age');
+    this.salaryInput = this.modal.locator('#salary');
+    this.departmentInput = this.modal.locator('#department');
+    this.submitButton = this.modal.locator('#submit');
   }
 
   /**
-   * Navigates to the Web Tables page.
+   * Navigates to the Web Tables page and waits for existing rows to render.
    */
   async navigate() {
     await this.page.goto('/webtables');
+    // Wait for at least one table row to ensure the React app has mounted
+    await this.page.locator('tbody tr').first().waitFor({ state: 'visible', timeout: 15000 });
   }
 
   /**
-   * Clicks the Add Button to open the registration form modal.
+   * Clicks the Add Button to open the registration form modal and waits for it.
    */
   async clickAdd() {
     await this.addButton.click({ force: true });
+    // Explicitly wait for modal to be fully visible before proceeding
+    await this.modal.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   /**
    * Fills the employee registration form details.
    */
-  async fillRegistrationForm(first: string, last: string, email: string, age: string, salary: string, dept: string) {
+  async fillRegistrationForm(
+    first: string,
+    last: string,
+    email: string,
+    age: string,
+    salary: string,
+    dept: string,
+  ) {
+    await this.firstNameInput.waitFor({ state: 'visible', timeout: 10000 });
     await this.firstNameInput.fill(first);
     await this.lastNameInput.fill(last);
     await this.emailInput.fill(email);
@@ -55,17 +71,22 @@ export class WebTablesPage {
   }
 
   /**
-   * Submits the registration modal form.
+   * Submits the registration modal form and waits for the modal to close.
    */
   async submitForm() {
     await this.submitButton.click({ force: true });
+    // Wait for modal to disappear so the table re-renders with new data
+    await this.modal.waitFor({ state: 'hidden', timeout: 10000 });
   }
 
   /**
    * Searches the table for a specific query string.
    */
   async searchRecord(query: string) {
+    await this.searchInput.clear();
     await this.searchInput.fill(query);
+    // Brief pause to let the table filter re-render
+    await this.page.waitForTimeout(500);
   }
 
   /**
@@ -73,16 +94,18 @@ export class WebTablesPage {
    */
   async verifyRecordInTable(email: string, expectedFirstName: string) {
     const row = this.page.locator('tbody tr').filter({ hasText: email });
-    await expect(row).toBeVisible();
+    await expect(row).toBeVisible({ timeout: 10000 });
     await expect(row).toContainText(expectedFirstName);
   }
 
   /**
-   * Clicks the Edit action icon for a row identified by its email.
+   * Clicks the Edit action icon for a row identified by its email,
+   * then waits for the edit modal to open.
    */
   async clickEditForRecord(email: string) {
     const row = this.page.locator('tbody tr').filter({ hasText: email });
     await row.locator('span[title="Edit"]').click({ force: true });
+    await this.modal.waitFor({ state: 'visible', timeout: 10000 });
   }
 
   /**
@@ -98,8 +121,6 @@ export class WebTablesPage {
    */
   async verifyRecordDeleted(email: string) {
     const row = this.page.locator('tbody tr').filter({ hasText: email });
-    // In demoqa webtable, when searching for non-existing query, rows become invisible or table contains no matches.
-    // Let's assert that there is no visible row containing this text.
-    await expect(row).not.toBeVisible();
+    await expect(row).not.toBeVisible({ timeout: 10000 });
   }
 }
