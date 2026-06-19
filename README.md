@@ -123,13 +123,49 @@ You can customize browser and device targeting by editing `browserstack.yml`.
 
 ## 🤖 GitHub Actions Workflow
 
-When pushing or making pull requests to `main` or `master` branches, the `.github/workflows/playwright.yml` workflow automatically runs:
-1. Provisions an Ubuntu Runner.
-2. Checks out code and restores Node modules cache.
-3. Installs project dependencies.
-4. Downloads Playwright browsers and dependencies.
-5. Performs Gherkin-to-Playwright compilation and runs the test suite.
-6. Uploads the HTML report artifact as a zip package on both success and failure.
+The pipeline at `.github/workflows/playwright.yml` has **three trigger types** and runs each browser in its own parallel job.
+
+### Triggers
+
+| Trigger | When |
+|---------|------|
+| **Push / PR** | On every push or pull request targeting `main` / `master` |
+| **Scheduled (nightly)** | Every **weekday (Mon–Fri) at midnight UTC** via `cron: '0 0 * * 1-5'` |
+| **Manual dispatch** | From the **Actions** tab → select suite: `all`, `ui`, or `api` |
+
+### Pipeline Architecture
+
+```
+ setup  ──────────────────────────────────────────────────────────────┐
+  │  Install npm deps (npm ci)                                        │
+  │  Cache Playwright browsers (keyed on package-lock.json)          │
+  └──► test [chromium] ──► Upload report artifact                    │
+  └──► test [firefox]  ──► Upload report artifact    (parallel)      │
+  └──► test [webkit]   ──► Upload report artifact                    │
+                                   │                                  │
+                             report job                               │
+                        (always runs, writes                          │
+                         GitHub Step Summary)   ──────────────────────┘
+```
+
+### Artifacts
+
+| Artifact | Retained |
+|----------|----------|
+| `playwright-report-<browser>` – full HTML report | 14 days |
+| `test-results-<browser>-<run#>` – traces, screenshots, videos (failure only) | 7 days |
+
+### Email Notifications
+
+GitHub automatically emails the commit author / repo owner when a **scheduled or push-triggered run fails**. To make sure you receive them:
+
+1. Go to **[GitHub Settings → Notifications](https://github.com/settings/notifications)**.
+2. Under **GitHub Actions**, ensure *"Send notifications for failed workflows only"* or *"All activity"* is selected.
+3. Confirm your account email address is **verified**.
+
+### Concurrency
+
+Push / PR runs on the same branch automatically cancel any in-flight run, keeping PR feedback fast. Scheduled runs are **never** cancelled by this rule.
 
 ---
 
