@@ -1,38 +1,189 @@
 name: Playwright BDD Tests
 
+# ─────────────────────────────────────────────
+#  Triggers
+# ─────────────────────────────────────────────
 on:
+  # Run on every push / PR to the main branch
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 
+  # Scheduled nightly run – every weekday (Mon–Fri) at midnight UTC
+  # GitHub email notifications are sent automatically on failure
+  schedule:
+    - cron: '0 0 * * 1-5'   # Mon–Fri 00:00 UTC
+
+  # Allow manually triggering the pipeline from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Test suite to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ui
+          - api
+
+# ─────────────────────────────────────────────
+#  Concurrency – cancel in-flight runs on the
+#  same branch when a new push arrives (keeps
+#  PR feedback fast). Scheduled runs are never
+#  cancelled by this rule.
+# ─────────────────────────────────────────────
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
+# ─────────────────────────────────────────────
+#  Jobs
+# ─────────────────────────────────────────────
 jobs:
-  test:
-    timeout-minutes: 15
+
+  # ── 1. Install dependencies once & cache them ──────────────────────
+  setup:
+    name: Install & Cache Dependencies
     runs-on: ubuntu-22.04
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'npm'
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install npm Dependencies
+        run: npm ci
 
-    - name: Install Playwright Browsers and System Dependencies
-      run: npx playwright install --with-deps
+      # Cache Playwright browser binaries keyed on the Playwright version
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
 
-    - name: Run BDD Code Generation & Test Suite
-      run: npm run test
+      - name: Install Playwright Browsers & System Deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
 
-    - name: Upload Playwright Test Report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+      # If browsers were cached we still need system deps (ffmpeg, libnss, etc.)
+      - name: Install System Dependencies Only (cached browsers)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+
+  # ── 2. Run tests in a browser matrix ──────────────────────────────
+  test:
+    name: Tests – ${{ matrix.browser }}
+    needs: setup
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false          # All browsers run even if one fails
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install npm Dependencies
+        run: npm ci
+
+      - name: Restore Playwright Browser Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install System Dependencies
+        run: npx playwright install-deps ${{ matrix.browser }}
+
+      # Determine which npm script to run (manual dispatch can override)
+      - name: Resolve Test Command
+        id: suite
+        run: |
+          INPUT="${{ github.event.inputs.suite }}"
+          if [ "$INPUT" = "ui" ]; then
+            echo "cmd=test:ui" >> "$GITHUB_OUTPUT"
+          elif [ "$INPUT" = "api" ]; then
+            echo "cmd=test:api" >> "$GITHUB_OUTPUT"
+          else
+            echo "cmd=test" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compile Gherkin & Run Test Suite
+        run: npx playwright-bdd gherkin && npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      # ── Artifacts ──────────────────────────────────────────────────
+      - name: Upload HTML Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload Traces & Screenshots on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.browser }}-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
+
+  # ── 3. Merge reports & post job summary ───────────────────────────
+  report:
+    name: Test Summary
+    needs: test
+    runs-on: ubuntu-22.04
+    if: always()
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Download all three browser reports into separate subdirs
+      - name: Download All Reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: playwright-report-*
+          merge-multiple: false
+          path: all-reports
+
+      - name: Write Job Summary
+        run: |
+          echo "## 🎭 Playwright BDD Test Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Trigger** | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Runner OS** | ubuntu-22.04 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Browsers** | Chromium · Firefox · WebKit |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "HTML reports for each browser are available in the **Artifacts** tab of this run." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Email notifications**: GitHub will automatically send a failure email to the committer/owner when a scheduled or push-triggered run fails. Ensure your GitHub account email is verified and notification preferences are enabled in [GitHub Settings → Notifications](https://github.com/settings/notifications)." >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail Summary Job If Tests Failed
+        if: needs.test.result == 'failure'
+        run: |
+          echo "❌ One or more browser test jobs failed. Check the individual job logs above."
+          exit 1

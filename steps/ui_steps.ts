@@ -140,13 +140,13 @@ When('I select date of birth {string} {string} {string}', async ({ practiceFormP
 
 When('I select subjects:', async ({ practiceFormPage }, dataTable) => {
   // Extract subjects as array of strings
-  const subjects = dataTable.raw().map(row => row[0]);
+  const subjects = dataTable.raw().map((row: string[]) => row[0]);
   await practiceFormPage.enterSubjects(subjects);
 });
 
 When('I select hobbies:', async ({ practiceFormPage }, dataTable) => {
   // Extract hobbies as array of strings
-  const hobbies = dataTable.raw().map(row => row[0]);
+  const hobbies = dataTable.raw().map((row: string[]) => row[0]);
   await practiceFormPage.selectHobbies(hobbies);
 });
 
