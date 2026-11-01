@@ -22,6 +22,13 @@ export default defineConfig({
   reporter: [
     ['html', { open: 'never' }],
     ['list'],
+    [
+      './packages/pulse-playwright-reporter/index.mjs',
+      {
+        endpoint: 'http://localhost:1420/__playwright_api/ingest',
+        repository: 'mnashed13/Playwright-BDD-test-framework',
+      },
+    ],
   ],
   use: {
     baseURL: 'https://demoqa.com',
