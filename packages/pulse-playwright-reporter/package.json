@@ -1,0 +1,23 @@
+{
+  "name": "@browserstack-pulse/playwright-reporter",
+  "version": "1.0.0",
+  "description": "Reusable multi-repository Playwright reporter and trace publisher for the Centralised Playwright Trace Viewer & QA Hub",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "keywords": [
+    "playwright",
+    "trace-viewer",
+    "reporter",
+    "azure-devops",
+    "buildkite",
+    "qa-reporting"
+  ],
+  "license": "MIT"
+}
